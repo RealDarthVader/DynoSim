@@ -31,7 +31,8 @@ Then open:
 ```
 http://127.0.0.1:8000
 ```
-
+LIVE DEMO:
+https://dynosim.onrender.com/
 ## Note
 
 This is not a physically accurate engine simulator. The dyno curves are generated using simplified calculations and assumptions. The project was mainly built as an experiment to combine simulation logic with AI-generated analysis.
