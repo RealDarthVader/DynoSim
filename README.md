@@ -17,7 +17,6 @@ The idea is simple: enter engine specifications such as displacement, compressio
 * Python
 * FastAPI
 * Pydantic
-* Anthropic Claude API
 * HTML/CSS/JavaScript
 
 ## Running the Project
