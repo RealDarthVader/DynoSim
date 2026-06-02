@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DynoSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #111114;
+      --surface2: #18181d;
+      --border: #2a2a35;
+      --red: #e8312a;
+      --amber: #f5a623;
+      --green: #2de08a;
+      --blue: #3d9cf5;
+      --text: #e8e8f0;
+      --text-dim: #7a7a90;
+      --text-muted: #444458;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Rajdhani", sans-serif;
+      background:
+        linear-gradient(rgba(61, 156, 245, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61, 156, 245, 0.03) 1px, transparent 1px),
+        radial-gradient(circle at top, rgba(232, 49, 42, 0.08), transparent 30%),
+        linear-gradient(180deg, #09090a 0%, #0e0e12 100%);
+      background-size: 40px 40px, 40px 40px, auto, auto;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 18%, transparent 82%, rgba(255,255,255,0.015));
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 11, 0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(145deg, rgba(232, 49, 42, 0.95), rgba(122, 10, 5, 0.95));
+      clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06), 0 0 20px rgba(232,49,42,0.18);
+    }
+
+    .wordmark {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      line-height: 1;
+    }
+
+    .wordmark span {
+      color: var(--red);
+    }
+
+    .version {
+      color: var(--text-dim);
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.24em;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(24,24,29,0.95), rgba(17,17,20,0.98));
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.28em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--red);
+      box-shadow: 0 0 10px rgba(232,49,42,0.4);
+    }
+
+    .input-panel form {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .field label {
+      font-family: "Share Tech Mono", monospace;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      background: #0d0d10;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 2px;
+      height: 46px;
+      padding: 0 12px;
+      font-family: "Rajdhani", sans-serif;
+      font-size: 1.05rem;
+      outline: none;
+      transition: border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(232,49,42,0.7);
+      box-shadow: 0 0 0 3px rgba(232,49,42,0.12);
+    }
+
+    .field.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .cta {
+      margin-top: 8px;
+      position: relative;
+      height: 54px;
+      border: 0;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #a7120c, #e8312a 55%, #b81710);
+      color: white;
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.32em;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease;
+    }
+
+    .cta::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-130%);
+      background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.22) 50%, transparent 85%);
+      transition: transform 420ms ease;
+    }
+
+    .cta:hover::before {
+      transform: translateX(130%);
+    }
+
+    .cta:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .cta:disabled {
+      opacity: 0.6;
+      cursor: wait;
+      transform: none;
+    }
+
+    .output {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 320ms ease, transform 320ms ease;
+    }
+
+    .stats-bar.ready,
+    .fade-up.ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .stat {
+      background: var(--surface);
+      padding: 16px;
+      min-height: 92px;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+    }
+
+    .stat-label {
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+
+    .stat-value.red {
+      color: var(--red);
+    }
+
+    .stat-value.amber {
+      color: var(--amber);
+    }
+
+    .stat-value.neutral {
+      color: var(--text);
+    }
+
+    .chart-wrap {
+      padding: 16px;
+      min-height: 470px;
+      display: grid;
+      grid-template-rows: minmax(340px, 1fr) auto;
+      gap: 16px;
+    }
+
+    .chart-state,
+    .chart-area {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(7,7,9,0.75), rgba(15,15,18,0.9));
+      min-height: 340px;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .chart-area {
+      padding: 12px;
+    }
+
+    .empty-copy,
+    .loading-copy {
+      text-align: center;
+      color: var(--text-dim);
+      font-family: "Share Tech Mono", monospace;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      padding: 24px;
+    }
+
+    .empty-icon {
+      width: 74px;
+      height: 74px;
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      background:
+        linear-gradient(90deg, transparent 48%, rgba(61,156,245,0.08) 50%, transparent 52%),
+        linear-gradient(transparent 48%, rgba(61,156,245,0.08) 50%, transparent 52%);
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid rgba(232,49,42,0.15);
+      border-top-color: var(--red);
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .chart-meta {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rating-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-family: "Share Tech Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.78rem;
+    }
+
+    .badge.beast {
+      color: #fff1f0;
+      border-color: rgba(232,49,42,0.45);
+      background: rgba(232,49,42,0.16);
+    }
+
+    .badge.strong {
+      color: #fff3d9;
+      border-color: rgba(245,166,35,0.4);
+      background: rgba(245,166,35,0.14);
+    }
+
+    .badge.average {
+      color: #d9ebff;
+      border-color: rgba(61,156,245,0.4);
+      background: rgba(61,156,245,0.14);
+    }
+
+    .badge.weak,
+    .badge.gutless {
+      color: #b5b5c8;
+      border-color: rgba(122,122,144,0.35);
+      background: rgba(122,122,144,0.12);
+    }
+
+    .summary {
+      margin: 0;
+      font-style: italic;
+      color: #cfcfe0;
+      font-size: 1.06rem;
+    }
+
+    .suggestions-panel {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 320ms ease, transform 320ms ease;
+    }
+
+    .suggestions-panel.ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .suggestions {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .suggestion {
+      border: 1px solid var(--border);
+      border-left: 3px solid rgba(232,49,42,0.65);
+      background: rgba(14,14,17,0.9);
+      padding: 14px;
+      transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+    }
+
+    .suggestion:hover {
+      border-left-color: var(--red);
+      transform: translateX(2px);
+      background: rgba(18,18,22,0.98);
+    }
+
+    .suggestion-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .suggestion-title {
+      font-family: "Barlow Condensed", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .gain {
+      color: var(--green);
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.84rem;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+
+    .suggestion p,
+    .insight p {
+      margin: 0;
+      color: #c9c9d8;
+      line-height: 1.45;
+    }
+
+    .insight {
+      border: 1px solid rgba(61,156,245,0.28);
+      background: rgba(61,156,245,0.08);
+      padding: 14px;
+    }
+
+    .insight-label {
+      color: var(--blue);
+      font-family: "Share Tech Mono", monospace;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 0.74rem;
+      margin-bottom: 8px;
+    }
+
+    .warning {
+      margin: 0;
+      padding: 10px 14px;
+      border: 1px solid rgba(245,166,35,0.28);
+      background: rgba(245,166,35,0.08);
+      color: #f2d6a0;
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.07em;
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 320ms ease, transform 320ms ease;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        padding: 14px 16px;
+      }
+
+      .app {
+        padding: 12px;
+      }
+
+      .field-row,
+      .stats-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .wordmark {
+        font-size: 1.55rem;
+      }
+
+      .version {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="wordmark">DYNO<span>SIM</span></div>
+    </div>
+    <div class="version">v0.1.0</div>
+  </header>
+
+  <main class="app">
+    <aside class="panel input-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="dot"></span>
+          Engine Config
+        </div>
+      </div>
+      <form id="dyno-form">
+        <div class="field">
+          <label for="displacement">Displacement</label>
+          <input id="displacement" name="displacement" type="number" min="500" step="50" value="2000" required>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="cylinders">Cylinders</label>
+            <select id="cylinders" name="cylinders">
+              <option>2</option>
+              <option>3</option>
+              <option selected>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>8</option>
+              <option>10</option>
+              <option>12</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="compression_ratio">Compression Ratio</label>
+            <input id="compression_ratio" name="compression_ratio" type="number" min="7" step="0.1" value="10.0" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="redline">Redline</label>
+            <input id="redline" name="redline" type="number" min="3000" step="100" value="6500" required>
+          </div>
+          <div class="field">
+            <label for="cam_profile">Cam Profile</label>
+            <select id="cam_profile" name="cam_profile">
+              <option selected value="stock">Stock</option>
+              <option value="sport">Sport</option>
+              <option value="race">Race</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="forced_induction">Induction Type</label>
+            <select id="forced_induction" name="forced_induction">
+              <option value="none" selected>NA</option>
+              <option value="turbo">Turbo</option>
+              <option value="supercharger">Supercharger</option>
+            </select>
+          </div>
+          <div class="field" id="boost-field">
+            <label for="boost_psi">Boost PSI</label>
+            <input id="boost_psi" name="boost_psi" type="number" min="0" step="0.5" value="0">
+          </div>
+        </div>
+
+        <div class="field-row" id="inline-row">
+          <div class="field" id="fuel-field">
+            <label for="fuel_type">Fuel Type</label>
+            <select id="fuel_type" name="fuel_type">
+              <option value="petrol" selected>Petrol</option>
+              <option value="diesel">Diesel</option>
+              <option value="e85">E85</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="drive_type">Drive Layout</label>
+            <select id="drive_type" name="drive_type">
+              <option value="rwd" selected>RWD</option>
+              <option value="fwd">FWD</option>
+              <option value="awd">AWD</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field hidden" id="fuel-row">
+          <label for="fuel_type_placeholder">Fuel Type</label>
+          <div id="fuel-row-slot"></div>
+        </div>
+
+        <button id="run-button" class="cta" type="submit">▶ RUN DYNO</button>
+      </form>
+    </aside>
+
+    <section class="output">
+      <div class="stats-bar" id="stats-bar">
+        <div class="stat">
+          <div class="stat-label">Peak Power</div>
+          <div class="stat-value red" id="peak-hp">0 HP</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Peak Torque</div>
+          <div class="stat-value amber" id="peak-torque">0 Nm</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Power @ RPM</div>
+          <div class="stat-value neutral" id="peak-hp-rpm">0 RPM</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Torque @ RPM</div>
+          <div class="stat-value neutral" id="peak-tq-rpm">0 RPM</div>
+        </div>
+      </div>
+
+      <div class="panel fade-up" id="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot" style="background: var(--amber); box-shadow: 0 0 10px rgba(245,166,35,0.4);"></span>
+            Dyno Graph
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div id="chart-state" class="chart-state">
+            <div class="empty-copy" id="empty-state">
+              <div class="empty-icon">▦</div>
+              <div>Awaiting simulation input</div>
+            </div>
+            <div class="loading-copy hidden" id="loading-state">
+              <div class="spinner"></div>
+              <div>Running simulation...</div>
+            </div>
+          </div>
+          <div class="chart-area hidden" id="chart-area">
+            <canvas id="dyno-chart"></canvas>
+          </div>
+          <div class="chart-meta">
+            <div class="rating-line">
+              <div id="rating-badge" class="badge hidden">Average</div>
+              <p id="summary-text" class="summary">Power and torque traces will appear here after the first run.</p>
+            </div>
+            <p id="ai-warning" class="warning hidden"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel suggestions-panel hidden" id="suggestions-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="dot"></span>
+            AI Tuning Suggestions
+          </div>
+        </div>
+        <div class="suggestions" id="suggestions-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("dyno-form");
+    const runButton = document.getElementById("run-button");
+    const forcedInduction = document.getElementById("forced_induction");
+    const boostField = document.getElementById("boost-field");
+    const boostInput = document.getElementById("boost_psi");
+    const inlineRow = document.getElementById("inline-row");
+    const fuelField = document.getElementById("fuel-field");
+    const fuelRow = document.getElementById("fuel-row");
+    const fuelRowSlot = document.getElementById("fuel-row-slot");
+    const statsBar = document.getElementById("stats-bar");
+    const chartPanel = document.getElementById("chart-panel");
+    const suggestionsPanel = document.getElementById("suggestions-panel");
+    const chartState = document.getElementById("chart-state");
+    const chartArea = document.getElementById("chart-area");
+    const emptyState = document.getElementById("empty-state");
+    const loadingState = document.getElementById("loading-state");
+    const ratingBadge = document.getElementById("rating-badge");
+    const summaryText = document.getElementById("summary-text");
+    const suggestionsList = document.getElementById("suggestions-list");
+    const aiWarning = document.getElementById("ai-warning");
+
+    const statRefs = {
+      hp: document.getElementById("peak-hp"),
+      torque: document.getElementById("peak-torque"),
+      hpRpm: document.getElementById("peak-hp-rpm"),
+      tqRpm: document.getElementById("peak-tq-rpm"),
+    };
+
+    let dynoChart = null;
+
+    function syncFuelLayout() {
+      const isNA = forcedInduction.value === "none";
+      boostField.classList.toggle("disabled", isNA);
+      boostInput.value = isNA ? "0" : (Number(boostInput.value) || 10);
+
+      if (isNA) {
+        fuelRow.classList.remove("hidden");
+        fuelRowSlot.appendChild(fuelField);
+      } else {
+        fuelRow.classList.add("hidden");
+        inlineRow.prepend(fuelField);
+      }
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value);
+    }
+
+    function animateValue(element, start, end, suffix, duration = 900) {
+      const startTime = performance.now();
+      const delta = end - start;
+      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+      function frame(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = easeOutCubic(progress);
+        const current = start + delta * eased;
+        element.textContent = `${formatNumber(current)}${suffix}`;
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          element.textContent = `${formatNumber(end)}${suffix}`;
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    function getBadgeClass(rating) {
+      const normalized = String(rating || "").trim().toLowerCase();
+      if (normalized === "beast") return "beast";
+      if (normalized === "strong") return "strong";
+      if (normalized === "average") return "average";
+      if (normalized === "weak") return "weak";
+      return "gutless";
+    }
+
+    function setLoading(isLoading) {
+      runButton.disabled = isLoading;
+      runButton.textContent = isLoading ? "RUNNING..." : "▶ RUN DYNO";
+
+      if (isLoading) {
+        emptyState.classList.add("hidden");
+        loadingState.classList.remove("hidden");
+        chartState.classList.remove("hidden");
+        chartArea.classList.add("hidden");
+      } else {
+        loadingState.classList.add("hidden");
+      }
+    }
+
+    function renderChart(data) {
+      const labels = data.power_curve.map((point) => point.rpm);
+      const powerData = data.power_curve.map((point) => point.value);
+      const torqueData = data.torque_curve.map((point) => point.value);
+
+      if (dynoChart) dynoChart.destroy();
+
+      const ctx = document.getElementById("dyno-chart").getContext("2d");
+      dynoChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Power (HP)",
+              data: powerData,
+              yAxisID: "yPower",
+              borderColor: "#e8312a",
+              backgroundColor: "rgba(232, 49, 42, 0.08)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              borderWidth: 3,
+            },
+            {
+              label: "Torque (Nm)",
+              data: torqueData,
+              yAxisID: "yTorque",
+              borderColor: "#f5a623",
+              backgroundColor: "rgba(245, 166, 35, 0.08)",
+              fill: true,
+              tension: 0.4,
+              pointRadius: 0,
+              borderWidth: 3,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: "#d0d0df",
+                font: { family: "Share Tech Mono", size: 11 }
+              }
+            },
+            tooltip: {
+              backgroundColor: "#0d0d10",
+              borderColor: "#2a2a35",
+              borderWidth: 1,
+              titleColor: "#ffffff",
+              bodyColor: "#d6d6e3",
+              titleFont: { family: "Share Tech Mono" },
+              bodyFont: { family: "Share Tech Mono" },
+              callbacks: {
+                title(items) {
+                  return `${formatNumber(items[0].label)} RPM`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: "rgba(122, 122, 144, 0.12)" },
+              ticks: {
+                color: "#9e9eb3",
+                font: { family: "Share Tech Mono", size: 11 },
+                callback(value) {
+                  const rpm = this.getLabelForValue(value);
+                  return `${(rpm / 1000).toFixed(1)}k`;
+                }
+              }
+            },
+            yPower: {
+              position: "left",
+              grid: { color: "rgba(122, 122, 144, 0.12)" },
+              ticks: {
+                color: "#e8312a",
+                font: { family: "Share Tech Mono", size: 11 }
+              }
+            },
+            yTorque: {
+              position: "right",
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: "#f5a623",
+                font: { family: "Share Tech Mono", size: 11 }
+              }
+            }
+          }
+        }
+      });
+
+      chartState.classList.add("hidden");
+      chartArea.classList.remove("hidden");
+    }
+
+    function renderSuggestions(data) {
+      suggestionsList.innerHTML = "";
+
+      (data.suggestions || []).forEach((item) => {
+        const card = document.createElement("article");
+        card.className = "suggestion";
+        card.innerHTML = `
+          <div class="suggestion-top">
+            <div class="suggestion-title">${item.title || "Tuning Move"}</div>
+            <div class="gain">${item.gain || "Qualitative"}</div>
+          </div>
+          <p>${item.detail || ""}</p>
+        `;
+        suggestionsList.appendChild(card);
+      });
+
+      const insight = document.createElement("div");
+      insight.className = "insight";
+      insight.innerHTML = `
+        <div class="insight-label">Tech Insight</div>
+        <p>${data.fun_fact || "Torque delivery shape changes how the engine feels long before peak numbers do."}</p>
+      `;
+      suggestionsList.appendChild(insight);
+    }
+
+    function updateStats(data) {
+      animateValue(statRefs.hp, 0, data.peak_hp, " HP");
+      animateValue(statRefs.torque, 0, data.peak_torque, " Nm");
+      animateValue(statRefs.hpRpm, 0, data.peak_hp_rpm, " RPM");
+      animateValue(statRefs.tqRpm, 0, data.peak_tq_rpm, " RPM");
+      statsBar.classList.add("ready");
+    }
+
+    function revealResults(data) {
+      renderChart(data);
+      updateStats(data);
+      renderSuggestions(data);
+
+      ratingBadge.textContent = data.rating || "Average";
+      ratingBadge.className = `badge ${getBadgeClass(data.rating)}`;
+      ratingBadge.classList.remove("hidden");
+      summaryText.textContent = data.summary || "Simulation complete.";
+
+      if (data.ai_warning) {
+        aiWarning.textContent = data.ai_warning;
+        aiWarning.classList.remove("hidden");
+      } else {
+        aiWarning.classList.add("hidden");
+      }
+
+      chartPanel.classList.add("ready");
+      suggestionsPanel.classList.remove("hidden");
+      suggestionsPanel.classList.add("ready");
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      syncFuelLayout();
+      setLoading(true);
+      chartPanel.classList.add("ready");
+
+      const forced = forcedInduction.value;
+      const payload = {
+        displacement: Number(document.getElementById("displacement").value),
+        cylinders: Number(document.getElementById("cylinders").value),
+        compression_ratio: Number(document.getElementById("compression_ratio").value),
+        redline: Number(document.getElementById("redline").value),
+        forced_induction: forced,
+        boost_psi: forced === "none" ? 0 : Number(boostInput.value || 0),
+        fuel_type: document.getElementById("fuel_type").value,
+        engine_type: forced === "none" ? "NA" : "forced",
+        cam_profile: document.getElementById("cam_profile").value,
+        drive_type: document.getElementById("drive_type").value
+      };
+
+      try {
+        const response = await fetch("/api/dyno", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Simulation failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        revealResults(data);
+      } catch (error) {
+        chartState.classList.remove("hidden");
+        chartArea.classList.add("hidden");
+        emptyState.classList.remove("hidden");
+        loadingState.classList.add("hidden");
+        summaryText.textContent = error.message || "Simulation request failed.";
+        ratingBadge.classList.add("hidden");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    forcedInduction.addEventListener("change", syncFuelLayout);
+    syncFuelLayout();
+  </script>
+</body>
+</html>
